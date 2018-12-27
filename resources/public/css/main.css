@@ -77,6 +77,10 @@ body {
 }
 
 nav {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     padding: 1em;
     background: var(--color-accent);
 }

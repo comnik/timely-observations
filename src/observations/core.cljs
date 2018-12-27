@@ -22,6 +22,13 @@
                     #:channel{:from "A" :to "B"}])
       (d/conn-from-db)))
 
+(defonce history (atom [@conn]))
+
+(defn prevent-default [e] (.preventDefault e) e)
+
+(defn change-version [idx]
+  (d/reset-conn! conn (nth @history idx)))
+
 (rum/defc graph-canvas
   < {:did-mount
      (fn [state]
@@ -48,8 +55,9 @@
 
 (rum/defc root
   < rum/reactive
-  [conn]
+  [conn history]
   (let [db        (rum/react conn)
+        history   (rum/react history)
         operators (d/q '[:find [(pull ?e q) ...]
                          :in $ q
                          :where [?e :operator/name _]] db graph/operator-query)
@@ -60,14 +68,21 @@
                          [?e :channel/to ?to]
                          [_ :operator/address ?from]
                          [_ :operator/address ?to]] db graph/channel-query)
-        graph     (graph/graph operators channels)]
+        graph     (graph/graph operators channels)
+
+        handle-history-change (comp (fn [e] (change-version (js/parseInt (.. e -target -value)))) prevent-default)]
     [:div
      [:nav
-      [:h1 "Timely Observations"]]
+      [:h1 "Timely Observations"]
+      [:#history-slider
+       [:input {:type      "range"
+                :min       0
+                :max       (dec (count history))
+                :on-change handle-history-change}]]]
      [:main
       (graph-canvas graph)]]))
 
-(rum/mount (root conn) (.getElementById js/document "app-container"))
+(rum/mount (root conn history) (.getElementById js/document "app-container"))
 
 (let [json->operator (fn [obj]
                        (let [obj (.-Operate obj)]
@@ -93,8 +108,9 @@
                                            (map json->operator))
                              channels (->> updates
                                            (filter channel?)
-                                           (map json->channel))]
-                         (d/transact! conn (concat operates channels))))]
+                                           (map json->channel))
+                             log      (d/transact! conn (concat operates channels))]
+                         (swap! history conj (:db-after log))))]
   (doto (js/WebSocket. "ws://localhost:9000/ws/")
     (.addEventListener "message" on-message)))
 
