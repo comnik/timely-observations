@@ -1,0 +1,106 @@
+/* http://meyerweb.com/eric/tools/css/reset/
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+}
+/* adding height: 100% to the upper will center the login panel yet screw the standard window */
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+    display: block;
+}
+body {
+    line-height: 1;
+    height: 100%;
+}
+ol, ul {
+    list-style: none;
+}
+blockquote, q {
+    quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+    content: '';
+    content: none;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+*:focus {
+  outline: none;
+}
+
+/* ------------------------------- */
+
+html,
+body {
+  background: #fafafa;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+  font-size: 16px;
+  color: #000000;
+}
+
+text {
+  font-weight: 300;
+}
+
+.node rect {
+  stroke: #333;
+  fill: #fff;
+}
+
+.edgePath path {
+  stroke: #333;
+  fill: #333;
+  stroke-width: 1.5px;
+}
+
+.node text {
+  pointer-events: none;
+}
+
+li {
+    transform: translateY(-20px);
+}
+
+li.enter {
+    color: green;
+    visibility: visible;
+    transform: translateY(20px);
+    transition: all .5s ease-in;
+}
+
+li.update {
+    transform: translateY(20px);
+}
+
+li.exit {
+    color: red;
+    visibility: hidden;
+    transform: translateY(-20px);
+    height: 0;
+    transition: all .5s ease-out;
+}
