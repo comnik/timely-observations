@@ -57,10 +57,40 @@ table {
 
 html,
 body {
-  background: #fafafa;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
-  font-size: 16px;
-  color: #000000;
+    --color-text-primary: rgba(0,0,0,0.87);
+    --color-text-secondary: rgba(0,0,0,0.54);
+    --color-text-button: rgba(96, 125, 139, 0.87);
+    --color-border: #E5E5E5;
+    --color-background: #FAF5F0;
+    --color-background-button-hover: rgba(153,153,153,0.2);
+    --color-background-button-active: rgba(153,153,153,0.4);
+    --color-balance: rgba(153,153,153,0.2);
+    --color-accent: #ec407a;
+    --color-accent-dimmed: rgba(255, 121, 0, 0.3);
+    --color-accent-pressed: rgba(255, 121, 0, 0.8);
+    
+    background: #fafafa;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+    font-size: 16px;
+    font-weight: 400;
+    color: #000000;
+}
+
+nav {
+    padding: 1em;
+    background: var(--color-accent);
+}
+
+main {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+svg {
+    width: 100vw;
+    height: 100%;
 }
 
 text {
@@ -80,27 +110,4 @@ text {
 
 .node text {
   pointer-events: none;
-}
-
-li {
-    transform: translateY(-20px);
-}
-
-li.enter {
-    color: green;
-    visibility: visible;
-    transform: translateY(20px);
-    transition: all .5s ease-in;
-}
-
-li.update {
-    transform: translateY(20px);
-}
-
-li.exit {
-    color: red;
-    visibility: hidden;
-    transform: translateY(-20px);
-    height: 0;
-    transition: all .5s ease-out;
 }
