@@ -10,15 +10,21 @@
     #js {:labelType "html"
          :label     label
          :rx        5
-         :ry        5}))
+         :ry        5
+         :width     150
+         :height    40}))
 
-(defn parent [addr]
-  (when (> (count addr) 2)
-    (let [parent-addr (first addr)])))
+(defn scope [address]
+  #js {:label (str "Subgraph: " address)
+       :style "fill: none; stroke: #000; stroke-width: 3px; stroke-dasharray: 2, 2;"
+       :rx    5
+       :ry    5})
 
-(defn edge [{:channel/keys [id from to]}]
-  #js {:label ""
-       :style ""})
+(defn edge [{:channel/keys [id from to subgraph?]}]
+  #js {:label (str id)
+       :style (if subgraph?
+                "stroke: #33f; stroke-width: 1px; stroke-dasharray: 5, 2; fill: none;"
+                "")})
 
 (def channel-query
   '[:channel/id :channel/from :channel/to :channel/subgraph?])
@@ -26,11 +32,15 @@
 (def operator-query
   '[:operator/address :operator/name])
 
-(defn graph [operators channels]
+(defn graph [scopes operators channels]
   (let [g (doto (js/dagreD3.graphlib.Graph. #js {:compound true})
             (.setGraph #js {:nodesp 50 :ranksep 50}))
-        _ (doseq [op operators]
-            (.setNode g (str (:operator/address op)) (node op)))
+        _ (doseq [address scopes]
+            (.setNode g (str address) (scope address)))
+        _ (doseq [{:operator/keys [address] :as op} operators]
+            (.setNode g (str address) (node op))
+            (when (> (count address) 2)
+              (.setParent g (str address) (str (butlast address)))))
         _ (doseq [chan channels]
             (let [from (:channel/from chan)
                   to   (:channel/to chan)]
@@ -38,10 +48,11 @@
     g))
 
 (def sample-graph
-  (doto (graph
-         [#:operator{:name "map" :address "A"}
-          #:operator{:name "filter" :address "B"}]
-         [])
-    (.setEdge "A" "B" #js {:label "floweth"})))
+  (let [scopes    []
+        operators [#:operator{:name "map" :address "A"}
+                   #:operator{:name "filter" :address "B"}]
+        channels     []]
+    (doto (graph scopes operators channels)
+      (.setEdge "A" "B" #js {:label "floweth"}))))
 
 (def render (js/dagreD3.render))

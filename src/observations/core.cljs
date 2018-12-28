@@ -68,7 +68,14 @@
                          [?e :channel/to ?to]
                          [_ :operator/address ?from]
                          [_ :operator/address ?to]] db graph/channel-query)
-        graph     (graph/graph operators channels)
+        scopes    (->> (d/q '[:find [?address ...]
+                              :where
+                              [?e :operator/address ?address]
+                              [(> (count ?address) 2)]] @conn)
+                       (map butlast)
+                       (remove #{[0]}) ;; ignore root
+                       (into #{}))
+        graph     (graph/graph scopes operators channels)
 
         handle-history-change (comp (fn [e] (change-version (js/parseInt (.. e -target -value)))) prevent-default)]
     [:div
