@@ -77,12 +77,30 @@ body {
 }
 
 nav {
+    position: fixed;
+    width: 100vw;
+    box-sizing: border-box;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 1em;
+    padding: .5em 1em;
     background: var(--color-accent);
+}
+
+nav > #tools {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#tools > div:first-child { margin-right: 1em; }
+
+#search > input {
+    font-size: 16px;
+    padding: .5em;
+    border-radius: 3px;
+    border: 1px solid transparent;
 }
 
 main {

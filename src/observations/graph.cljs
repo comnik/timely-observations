@@ -30,16 +30,17 @@
   '[:channel/id :channel/from :channel/to :channel/subgraph?])
 
 (def operator-query
-  '[:operator/address :operator/name])
+  '[:db/id :operator/address :operator/name])
 
 (defn graph [scopes operators channels]
-  (let [g (doto (js/dagreD3.graphlib.Graph. #js {:compound true})
+  (let [g (doto (js/dagreD3.graphlib.Graph.
+                 #js {:compound true})
             (.setGraph #js {:nodesp 50 :ranksep 50}))
         _ (doseq [address scopes]
             (.setNode g (str address) (scope address)))
         _ (doseq [{:operator/keys [address] :as op} operators]
             (.setNode g (str address) (node op))
-            (when (> (count address) 2)
+            (when (> (count address) 1)
               (.setParent g (str address) (str (butlast address)))))
         _ (doseq [chan channels]
             (let [from (:channel/from chan)
