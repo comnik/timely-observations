@@ -1,12 +1,14 @@
-(ns observations.core
+(ns ^:figwheel-hooks observations.core
   (:require
    [clojure.set :as set]
    [clojure.string :as str]
    [datascript.core :as d]
-   [rum.core :as rum]
-   [observations.graph :as graph]))
+   [observations.graph :as graph])
+  (:require-macros [observations.core :refer [html]]))
 
 (enable-console-print!)
+
+(defn dbg! [x] (println x) x)
 
 (def schema
   {:operator/name    {}
@@ -33,37 +35,85 @@
 (defn change-version [idx]
   (d/reset-conn! conn (nth @history idx)))
 
-(rum/defc graph-canvas
-  < {:did-mount
-     (fn [state]
-       (let [[graph] (:rum/args state)
-             svg     (js/d3.select "#graph-canvas")
-             g       (.selectAll svg "g")
-             zoom    (doto (js/d3.zoom)
-                       (.on "zoom" #(.attr g "transform" js/d3.event.transform)))]
-         (do
-           (graph/render g graph)
-           (.call svg zoom))
-         state))
-     
-     :did-update
-     (fn [state]
-       (let [[graph] (:rum/args state)
-             g       (-> (js/d3.select "#graph-canvas")
-                         (.selectAll "g"))]
-         (try
-           (graph/render g graph)
-           (catch js/Error ex (.error js/console ex)))
-         state))}
-  [graph]
-  [:svg#graph-canvas {:height 1080}
-   [:g]])
+(defn use-atom
+  [a]
+  (let [[x set-x] (js/React.useState @a)]
+    (js/React.useEffect
+     (fn []
+       (let [key (gensym "use-atom")]
+         (add-watch a key (fn [_ _ x x']
+                            (set-x x')))
+         (fn []
+           (remove-watch a key))))
+     [a])
+    x))
 
-(rum/defc root
-  < rum/reactive
-  [conn history]
-  (let [db           (rum/react conn)
-        history      (rum/react history)
+(defn use-db
+  [conn]
+  (let [[db set-db] (js/React.useState @conn)]
+    (js/React.useEffect
+     (fn []
+       (let [key (gensym "use-db")]
+         (d/listen! conn key (fn [tx-log]
+                               (set-db (:db-after tx-log))))
+         (fn []
+           (d/unlisten! conn key))))
+     [conn])
+    db))
+
+(defn use-query
+  [conn q]
+  (let [[result set-result] (js/React.useState nil)]
+    (js/React.useEffect
+     (fn []
+       (let [key (gensym "use-query")]
+         (d/listen! conn key (fn [tx-log]
+                               (let [result' (d/q q (:db-after tx-log))]
+                                 (set-result result'))))
+         (fn []
+           (d/unlisten! conn key))))
+     [q])
+    result))
+
+   ;; :did-update
+   ;; (fn [state]
+   ;;   (let [[graph] (:rum/args state)
+   ;;         g       (-> (js/d3.select "#graph-canvas")
+   ;;                     (.selectAll "g"))]
+   ;;     (try
+   ;;       (graph/render g graph)
+   ;;       (catch js/Error ex (.error js/console ex)))
+   ;;     state))
+
+(defn use-mount-effect
+  [f]
+  (js/React.useEffect f []))
+
+(defn GraphCanvas
+  [props]
+  (let [graph (.-graph props)
+        _     (use-mount-effect
+               (fn []
+                 (let [svg  (js/d3.select "#graph-canvas")
+                       g    (.selectAll svg "g")
+                       zoom (doto (js/d3.zoom)
+                              (.on "zoom" #(.attr g "transform" js/d3.event.transform)))]
+                   (.call svg zoom)
+                   (fn []))))
+        _     (js/React.useEffect
+               (fn []
+                 (let [svg (js/d3.select "#graph-canvas")
+                       g   (.selectAll svg "g")]
+                   (graph/render g graph)
+                   (fn []))))]
+    (html
+     [:svg#graph-canvas {:height 1080}
+      [:g]])))
+
+(defn Root
+  []
+  (let [db           (use-db conn)
+        history      (use-atom history)
         ui           (d/entity db :ui)
         query        (:ui/query ui)
         matches?     (if (some? query)
@@ -73,6 +123,7 @@
                             :in $ q matches?
                             :where
                             [?e :operator/name ?name]
+                            [(not= ?name "ArrangedSource")]
                             [(matches? ?name)]] db graph/operator-query matches?)
         operator-ids (into #{} (map :db/id) operators)
         channels     (d/q '[:find [(pull ?e q) ...]
@@ -95,25 +146,37 @@
 
         handle-query-change   (comp (fn [e] (d/transact! conn [{:db/ident :ui :ui/query (.. e -target -value)}])) prevent-default)
         handle-history-change (comp (fn [e] (change-version (js/parseInt (.. e -target -value)))) prevent-default)]
-    [:div
-     [:nav
-      [:h1 "Timely Observations"]
-      [:#tools
-       [:#search
-        [:input {:type        "text"
-                 :placeholder "Filter"
-                 :value       (:ui/query ui "")
-                 :on-change   handle-query-change}]]
-       [:#history-slider
-        [:input {:type      "range"
-                 :min       0
-                 :max       (dec (count history))
-                 :on-change handle-history-change}]]]]
-     [:main
-      (when (some? graph)
-        (graph-canvas graph))]]))
+    (html
+     [:div
+      [:nav
+       [:h1 "Timely Observations"]
+       [:#tools
+        [:#search
+         [:input {:type        "text"
+                  :placeholder "Filter"
+                  :value       (:ui/query ui "")
+                  :on-change   handle-query-change}]]
+        [:#history-slider
+         [:input {:type      "range"
+                  :min       0
+                  :max       (dec (count history))
+                  :on-change handle-history-change}]]]]
+      [:main
+       (when (some? graph)
+         [:> GraphCanvas {:graph graph}])]])))
 
-(rum/mount (root conn history) (.getElementById js/document "app-container"))
+(defn mount
+  [component node]
+  (js/ReactDOM.render (js/React.createElement component) node))
+
+(defn ^:after-load setup []
+  (println "setup")
+  (mount Root (.getElementById js/document "app-container")))
+
+(defn ^:before-load teardown []
+  (println "teardown"))
+
+(setup)
 
 (let [json->operator (fn [obj]
                        (let [obj (.-Operate obj)]
@@ -154,5 +217,7 @@
   (d/transact! conn [#:channel{:from "A" :to "C"}])
 
   (into [] (d/datoms @conn :aevt :operator/address))
+  (into [] (d/datoms @conn :aevt :channel/from))
+  
   
   )
